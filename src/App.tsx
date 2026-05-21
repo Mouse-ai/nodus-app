@@ -31,6 +31,9 @@ import {
 } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 
+// Импортируем компонент тулбара
+import { Toolbar } from './Toolbar';
+
 interface NodeData extends Record<string, unknown> {
     label: string;
     shape?: 'square' | 'circle' | 'diamond' | 'triangle';
@@ -70,24 +73,24 @@ function FigmaNode({ id, data }: NodeProps<Node<NodeData>>) {
             <Handle type="target" position={Position.Top} id="top-target" style={{ ...handleStyle, zIndex: 5 }} />
 
             <div style={{ zIndex: 2, width: '100%', padding: '20px', boxSizing: 'border-box' }}>
-        <textarea
-            value={data.label}
-            placeholder="Вопрос?"
-            onChange={(e) => data.onChange?.(id, e.target.value)}
-            rows={3}
-            style={{
-                border: 'none',
-                outline: 'none',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '16px',
-                fontWeight: 400,
-                color: '#000000',
-                textAlign: 'center',
-                width: '100%',
-                resize: 'none',
-                background: 'transparent'
-            }}
-        />
+                <textarea
+                    value={data.label}
+                    placeholder="Вопрос?"
+                    onChange={(e) => data.onChange?.(id, e.target.value)}
+                    rows={3}
+                    style={{
+                        border: 'none',
+                        outline: 'none',
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '16px',
+                        fontWeight: 400,
+                        color: '#000000',
+                        textAlign: 'center',
+                        width: '100%',
+                        resize: 'none',
+                        background: 'transparent'
+                    }}
+                />
             </div>
 
             <Handle type="source" position={Position.Left} id="left-source" style={{ ...handleStyle, top: '50%', transform: 'translateY(-50%)', zIndex: 5 }} />
@@ -151,8 +154,15 @@ const edgeTypes = { editable: EditableEdge };
 function AppContent() {
     const [nodes, setNodes, onNodesChange] = useNodesState<Node<NodeData>>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-
     const { screenToFlowPosition } = useReactFlow();
+
+    // Логика тулбара (удаление)
+    const selectedNode = nodes.find(n => n.selected);
+    const deleteSelectedNode = useCallback(() => {
+        if (!selectedNode) return;
+        setNodes((nds) => nds.filter((n) => n.id !== selectedNode.id));
+        setEdges((eds) => eds.filter((e) => e.source !== selectedNode.id && e.target !== selectedNode.id));
+    }, [selectedNode, setNodes, setEdges]);
 
     const onNodeLabelChange = useCallback((id: string, value: string) => {
         setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: { ...n.data, label: value } } : n));
@@ -185,13 +195,11 @@ function AppContent() {
         }, eds));
     }, [setEdges, onEdgeLabelChange]);
 
-    // Обработчик исправлен под типы XYFlow v12 (используем fromNodeId и fromHandleId)
     const onConnectEnd = useCallback((
         event: globalThis.MouseEvent | globalThis.TouchEvent,
         connectionState: FinalConnectionState
     ) => {
         if (!connectionState.isValid && connectionState.fromNode) {
-
             let clientX = 0;
             let clientY = 0;
 
@@ -201,9 +209,7 @@ function AppContent() {
             } else if ('changedTouches' in event && event.changedTouches?.[0]) {
                 clientX = event.changedTouches[0].clientX;
                 clientY = event.changedTouches[0].clientY;
-            } else {
-                return;
-            }
+            } else return;
 
             const flowPos = screenToFlowPosition({ x: clientX, y: clientY });
             const newNodeId = String(Date.now());
@@ -233,7 +239,6 @@ function AppContent() {
 
     return (
         <div style={{ display: 'flex', width: '100vw', height: '100vh', background: '#FFFFFF', color: '#000000' }}>
-
             <aside style={{
                 width: '296px',
                 height: '100%',
@@ -254,35 +259,17 @@ function AppContent() {
                 </div>
 
                 <button style={{
-                    width: '100%',
-                    height: '48px',
-                    background: '#EDEDED',
-                    border: 'none',
-                    borderRadius: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    fontFamily: 'Inter, sans-serif',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    marginBottom: '32px'
+                    width: '100%', height: '48px', background: '#EDEDED', border: 'none', borderRadius: '14px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '14px', cursor: 'pointer', marginBottom: '32px'
                 }}>
-                    <Plus size={18} strokeWidth={2.5} />
-                    Новое дерево
+                    <Plus size={18} strokeWidth={2.5} /> Новое дерево
                 </button>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
                     <div style={{
-                        height: '44px',
-                        padding: '0 12px 0 16px',
-                        borderRadius: '12px',
-                        border: '1px solid #000000',
-                        background: '#FFFFFF',
-                        display: 'flex',
-                        alignItems: 'center',
-                        cursor: 'pointer'
+                        height: '44px', padding: '0 12px 0 16px', borderRadius: '12px', border: '1px solid #000000',
+                        background: '#FFFFFF', display: 'flex', alignItems: 'center', cursor: 'pointer'
                     }}>
                         <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '14px' }}>Новый проект 3</span>
                     </div>
@@ -290,15 +277,12 @@ function AppContent() {
             </aside>
 
             <main style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                {/* ТУТ ПОЯВЛЯЕТСЯ ТУЛБАР */}
+                {selectedNode && <Toolbar onDelete={deleteSelectedNode} />}
+
                 <header style={{
-                    height: '56px',
-                    width: '100%',
-                    background: '#FFFFFF',
-                    borderBottom: '1px solid #F5F5F5',
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '0 24px',
-                    zIndex: 5
+                    height: '56px', width: '100%', background: '#FFFFFF', borderBottom: '1px solid #F5F5F5',
+                    display: 'flex', alignItems: 'center', padding: '0 24px', zIndex: 5
                 }}>
                     <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '14px' }}>Новый проект 3</span>
                 </header>
@@ -319,17 +303,8 @@ function AppContent() {
                     </ReactFlow>
 
                     <div style={{
-                        position: 'absolute',
-                        bottom: '24px',
-                        right: '24px',
-                        height: '36px',
-                        background: '#F5F5F5',
-                        borderRadius: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0 12px',
-                        gap: '16px',
-                        zIndex: 10
+                        position: 'absolute', bottom: '24px', right: '24px', height: '36px', background: '#F5F5F5',
+                        borderRadius: '10px', display: 'flex', alignItems: 'center', padding: '0 12px', gap: '16px', zIndex: 10
                     }}>
                         <Minus size={14} style={{ cursor: 'pointer', color: '#666666' }} />
                         <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '12px' }}>100%</span>
