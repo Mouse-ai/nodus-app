@@ -164,6 +164,13 @@ function AppContent() {
         setEdges((eds) => eds.filter((e) => e.source !== selectedNode.id && e.target !== selectedNode.id));
     }, [selectedNode, setNodes, setEdges]);
 
+    const onColorChange = useCallback((color: string) => {
+        if (!selectedNode) return;
+        setNodes((nds) => nds.map((n) =>
+            n.id === selectedNode.id ? { ...n, data: { ...n.data, color } } : n
+        ));
+    }, [selectedNode, setNodes]);
+
     const onNodeLabelChange = useCallback((id: string, value: string) => {
         setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: { ...n.data, label: value } } : n));
     }, [setNodes]);
@@ -200,16 +207,17 @@ function AppContent() {
         connectionState: FinalConnectionState
     ) => {
         if (!connectionState.isValid && connectionState.fromNode) {
-            let clientX = 0;
-            let clientY = 0;
 
-            if ('clientX' in event) {
-                clientX = event.clientX;
-                clientY = event.clientY;
-            } else if ('changedTouches' in event && event.changedTouches?.[0]) {
-                clientX = event.changedTouches[0].clientX;
-                clientY = event.changedTouches[0].clientY;
-            } else return;
+            // Исправлено: определяем координаты сразу, без лишних присвоений 0
+            const clientX = 'clientX' in event ? event.clientX :
+                ('changedTouches' in event && event.changedTouches?.[0] ? event.changedTouches[0].clientX : 0);
+
+            const clientY = 'clientY' in event ? event.clientY :
+                ('changedTouches' in event && event.changedTouches?.[0] ? event.changedTouches[0].clientY : 0);
+
+            if (clientX === 0 && clientY === 0) return; // Выходим, если координаты не удалось получить
+
+
 
             const flowPos = screenToFlowPosition({ x: clientX, y: clientY });
             const newNodeId = String(Date.now());
@@ -278,7 +286,8 @@ function AppContent() {
 
             <main style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                 {/* ТУТ ПОЯВЛЯЕТСЯ ТУЛБАР */}
-                {selectedNode && <Toolbar onDelete={deleteSelectedNode} />}
+                {selectedNode && <Toolbar onDelete={deleteSelectedNode}
+                                          onColorChange={onColorChange} />}
 
                 <header style={{
                     height: '56px', width: '100%', background: '#FFFFFF', borderBottom: '1px solid #F5F5F5',
