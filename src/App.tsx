@@ -330,9 +330,13 @@
                             position: 'absolute', bottom: '24px', right: '24px', height: '36px', background: '#F5F5F5',
                             borderRadius: '10px', display: 'flex', alignItems: 'center', padding: '0 12px', gap: '16px', zIndex: 10
                         }}>
-                            <Minus size={14} onClick={zoomOut} style={{ cursor: 'pointer', color: '#666666' }} />
+                            {/* Исправлено: добавлена стрелочная функция () => */}
+                            <Minus size={14} onClick={() => zoomOut()} style={{ cursor: 'pointer', color: '#666666' }} />
+
                             <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '12px' }}>100%</span>
-                            <Plus size={14} onClick={zoomIn} style={{ cursor: 'pointer', color: '#666666' }} />
+
+                            {/* Исправлено: добавлена стрелочная функция () => */}
+                            <Plus size={14} onClick={() => zoomIn()} style={{ cursor: 'pointer', color: '#666666' }} />
                         </div>
                     </div>
                 </main>
