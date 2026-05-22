@@ -44,12 +44,12 @@ interface NodeData extends Record<string, unknown> {
     fontSize?: number;
     fontFamily?: string;
     onChange?: (id: string, val: string) => void;
-    selected?: boolean;
 }
 
 interface Project {
     id: string;
     name: string;
+    // Типизируем узлы явно
     nodes: Node<NodeData>[];
     edges: Edge[];
 }
@@ -89,7 +89,7 @@ function FigmaNode({ id, data }: NodeProps<Node<NodeData>>) {
                 <textarea
                     className="nodrag nowheel"
                     value={data.label}
-                    placeholder="Вопрос? "
+                    placeholder="Вопрос?"
                     onChange={(e) => data.onChange?.(id, e.target.value)}
                     onKeyDown={(e) => e.stopPropagation()}
                     rows={3}
@@ -146,7 +146,7 @@ function EditableEdge({
                     <input
                         className="nodrag nowheel"
                         value={data?.label || ''}
-                        placeholder="Вариант ответа "
+                        placeholder="Ответ"
                         onChange={(e) => data?.onChange?.(id, e.target.value)}
                         onKeyDown={(e) => e.stopPropagation()}
                         style={{
@@ -173,17 +173,17 @@ const edgeTypes = { editable: EditableEdge };
 function AppContent() {
     const [projects, setProjects] = useState<Project[]>(() => {
         const saved = localStorage.getItem('nodus-projects');
-        if (saved) {
-            try {
-                return JSON.parse(saved);
-            } catch { }
+        try {
+            return saved ? JSON.parse(saved) : [{
+                id: '1',
+                name: 'Новый проект 1',
+                nodes: [{ id: '1', type: 'figmaNode', position: { x: 450, y: 150 }, data: { label: 'Вопрос?' } }],
+                edges: []
+            }];
+        } catch (e) {
+            console.error("Ошибка парсинга проектов:", e);
+            return [];
         }
-        return [{
-            id: '1',
-            name: 'Новый проект 1',
-            nodes: [{ id: '1', type: 'figmaNode', position: { x: 450, y: 150 }, data: { label: 'Вопрос?' } }],
-            edges: []
-        }];
     });
 
     const [activeProjectId, setActiveProjectId] = useState<string>(projects[0]?.id || '1');
@@ -220,12 +220,7 @@ function AppContent() {
     };
 
     useEffect(() => {
-        const safeProjects = projects.map(p => ({
-            ...p,
-            nodes: p.nodes.map(n => ({ ...n, data: { ...n.data, onChange: undefined } })),
-            edges: p.edges.map(e => ({ ...e, data: { ...e.data, onChange: undefined } }))
-        }));
-        localStorage.setItem('nodus-projects', JSON.stringify(safeProjects));
+        localStorage.setItem('nodus-projects', JSON.stringify(projects));
     }, [projects]);
 
     const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
@@ -259,8 +254,6 @@ function AppContent() {
         updateProjectData(activeProject.nodes, newEdges);
     }, [activeProject]);
 
-    const selectedNode = activeProject.nodes.find(n => n.selected);
-
     const onNodeClick = useCallback((_event: React.MouseEvent, node: Node<NodeData>) => {
         setProjects(prev => prev.map(p => p.id === activeProjectId ? {
             ...p,
@@ -269,6 +262,7 @@ function AppContent() {
     }, [activeProjectId]);
 
     const onNodeDataChange = useCallback((key: string, value: unknown) => {
+        const selectedNode = activeProject.nodes.find(n => n.selected);
         if (!selectedNode) return;
         updateProjectData(
             activeProject.nodes.map((n) =>
@@ -276,14 +270,15 @@ function AppContent() {
             ),
             activeProject.edges
         );
-    }, [selectedNode, activeProject]);
+    }, [activeProject]);
 
     const deleteSelectedNode = useCallback(() => {
+        const selectedNode = activeProject.nodes.find(n => n.selected);
         if (!selectedNode) return;
         const newNodes = activeProject.nodes.filter((n) => n.id !== selectedNode.id);
         const newEdges = activeProject.edges.filter((e) => e.source !== selectedNode.id && e.target !== selectedNode.id);
         updateProjectData(newNodes, newEdges);
-    }, [selectedNode, activeProject]);
+    }, [activeProject]);
 
     const onNodeLabelChange = useCallback((id: string, value: string) => {
         updateProjectData(
@@ -313,13 +308,12 @@ function AppContent() {
     }, [activeProject, onEdgeLabelChange]);
 
     const onConnectEnd = useCallback((
-        event: globalThis.MouseEvent | globalThis.TouchEvent,
+        event: MouseEvent | TouchEvent,
         connectionState: FinalConnectionState
     ) => {
         if (!connectionState.isValid && connectionState.fromNode) {
             const clientX = 'clientX' in event ? event.clientX : ('changedTouches' in event && event.changedTouches?.[0] ? event.changedTouches[0].clientX : 0);
             const clientY = 'clientY' in event ? event.clientY : ('changedTouches' in event && event.changedTouches?.[0] ? event.changedTouches[0].clientY : 0);
-            if (clientX === 0 && clientY === 0) return;
 
             const flowPos = screenToFlowPosition({ x: clientX, y: clientY });
             const newNodeId = String(Date.now());
@@ -355,6 +349,8 @@ function AppContent() {
         data: { ...e.data, onChange: onEdgeLabelChange }
     }));
 
+    const selectedNode = activeProject.nodes.find(n => n.selected);
+
     return (
         <div style={{ display: 'flex', width: '100vw', height: '100vh', background: '#FFFFFF', color: '#000000' }}>
             {isSidebarVisible && (
@@ -369,7 +365,7 @@ function AppContent() {
 
                     {isSearchVisible && (
                         <div style={{ marginBottom: '16px', position: 'relative' }}>
-                            <input autoFocus placeholder="Поиск проектов... " value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #EFEFEF', outline: 'none' }} />
+                            <input autoFocus placeholder="Поиск проектов..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #EFEFEF', outline: 'none' }} />
                             <X size={14} style={{ position: 'absolute', right: '10px', top: '10px', cursor: 'pointer' }} onClick={() => { setIsSearchVisible(false); setSearchTerm(''); }} />
                         </div>
                     )}
@@ -463,7 +459,6 @@ function AppContent() {
                     </div>
                 </div>
 
-                {/* Окно прохода */}
                 {activeWalkthrough && (
                     <div style={{
                         position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
@@ -494,7 +489,7 @@ function AppContent() {
                                             background: '#FFF', cursor: 'pointer', fontWeight: 600, fontSize: '16px', fontFamily: 'Inter'
                                         }}
                                     >
-                                        {edge.data?.label || "Далее"}
+                                        {(edge.data as { label?: string })?.label || "Далее "}
                                     </button>
                                 ))
                             }
