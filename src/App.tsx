@@ -30,7 +30,8 @@ import {
     Search,
     Columns3,
     Minus,
-    X
+    X,
+    MoreHorizontal
 } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import { Toolbar } from './Toolbar';
@@ -85,27 +86,27 @@ function FigmaNode({ id, data }: NodeProps<Node<NodeData>>) {
             <Handle type="target" position={Position.Top} id="top-target" style={{ ...handleStyle, zIndex: 5 }} />
 
             <div style={{ zIndex: 2, width: '100%', padding: '20px', boxSizing: 'border-box' }}>
-        <textarea
-            className="nodrag nowheel"
-            value={data.label}
-            placeholder="Вопрос? "
-            onChange={(e) => data.onChange?.(id, e.target.value)}
-            onKeyDown={(e) => e.stopPropagation()} // ✅ Блокирует хоткеи React Flow при печати
-            rows={3}
-            style={{
-                border: 'none',
-                outline: 'none',
-                pointerEvents: 'all',
-                fontSize: `${data.fontSize || 16}px`,
-                fontWeight: 400,
-                textAlign: 'center',
-                width: '100%',
-                resize: 'none',
-                background: 'transparent',
-                color: data.textColor || '#000000',
-                fontFamily: data.fontFamily || 'Inter, sans-serif'
-            }}
-        />
+                <textarea
+                    className="nodrag nowheel"
+                    value={data.label}
+                    placeholder="Вопрос? "
+                    onChange={(e) => data.onChange?.(id, e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    rows={3}
+                    style={{
+                        border: 'none',
+                        outline: 'none',
+                        pointerEvents: 'all',
+                        fontSize: `${data.fontSize || 16}px`,
+                        fontWeight: 400,
+                        textAlign: 'center',
+                        width: '100%',
+                        resize: 'none',
+                        background: 'transparent',
+                        color: data.textColor || '#000000',
+                        fontFamily: data.fontFamily || 'Inter, sans-serif'
+                    }}
+                />
             </div>
 
             <Handle type="source" position={Position.Left} id="left-source" style={{ ...handleStyle, top: '50%', transform: 'translateY(-50%)', zIndex: 5 }} />
@@ -147,7 +148,7 @@ function EditableEdge({
                         value={data?.label || ''}
                         placeholder="Вариант ответа "
                         onChange={(e) => data?.onChange?.(id, e.target.value)}
-                        onKeyDown={(e) => e.stopPropagation()} // ✅ Блокирует хоткеи React Flow при печати
+                        onKeyDown={(e) => e.stopPropagation()}
                         style={{
                             border: 'none',
                             outline: 'none',
@@ -175,9 +176,7 @@ function AppContent() {
         if (saved) {
             try {
                 return JSON.parse(saved);
-            } catch {
-                // fallback если данные повреждены
-            }
+            } catch { }
         }
         return [{
             id: '1',
@@ -191,10 +190,35 @@ function AppContent() {
     const [isSidebarVisible, setIsSidebarVisible] = useState(true);
     const [isSearchVisible, setIsSearchVisible] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeMenuProjectId, setActiveMenuProjectId] = useState<string | null>(null);
+    const [activeWalkthrough, setActiveWalkthrough] = useState<{
+        project: Project;
+        currentNode: Node<NodeData>;
+    } | null>(null);
 
     const { screenToFlowPosition, zoomIn, zoomOut } = useReactFlow();
 
-    // ✅ Сохраняем в localStorage БЕЗ функций (они удаляются при JSON.stringify)
+    const runWalkthrough = (project: Project) => {
+        setActiveMenuProjectId(null);
+        const startNode = project.nodes.find(n => !project.edges.find(e => e.target === n.id)) || project.nodes[0];
+        if (startNode) {
+            setActiveWalkthrough({ project, currentNode: startNode });
+        }
+    };
+
+    const goToNextNode = (edgeId: string) => {
+        if (!activeWalkthrough) return;
+        const edge = activeWalkthrough.project.edges.find(e => e.id === edgeId);
+        if (!edge) return;
+        const nextNode = activeWalkthrough.project.nodes.find(n => n.id === edge.target);
+        if (nextNode) {
+            setActiveWalkthrough({ ...activeWalkthrough, currentNode: nextNode });
+        } else {
+            alert("Проход завершен!");
+            setActiveWalkthrough(null);
+        }
+    };
+
     useEffect(() => {
         const safeProjects = projects.map(p => ({
             ...p,
@@ -237,7 +261,6 @@ function AppContent() {
 
     const selectedNode = activeProject.nodes.find(n => n.selected);
 
-    // ✅ Обработчик клика для выделения ноды (чтобы работал тулбар)
     const onNodeClick = useCallback((_event: React.MouseEvent, node: Node<NodeData>) => {
         setProjects(prev => prev.map(p => p.id === activeProjectId ? {
             ...p,
@@ -323,9 +346,6 @@ function AppContent() {
         }
     }, [screenToFlowPosition, activeProject, onNodeLabelChange, onEdgeLabelChange]);
 
-    const filteredProjects = projects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    // ✅ "Наживляем" колбэки прямо перед рендером. Это безопаснее, чем менять стейт.
     const nodesForFlow = activeProject.nodes.map(n => ({
         ...n,
         data: { ...n.data, onChange: onNodeLabelChange }
@@ -359,9 +379,39 @@ function AppContent() {
                     </button>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
-                        {filteredProjects.map(p => (
-                            <div key={p.id} onClick={() => setActiveProjectId(p.id)} style={{ height: '44px', padding: '0 12px 0 16px', borderRadius: '12px', border: activeProjectId === p.id ? '1px solid #000000' : '1px solid #EFEFEF', background: activeProjectId === p.id ? '#F5F5F5' : '#FFFFFF', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        {projects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
+                            <div
+                                key={p.id}
+                                onClick={() => setActiveProjectId(p.id)}
+                                style={{
+                                    height: '44px', padding: '0 12px 0 16px', borderRadius: '12px',
+                                    border: activeProjectId === p.id ? '1px solid #000000' : '1px solid #EFEFEF',
+                                    background: activeProjectId === p.id ? '#F5F5F5' : '#FFFFFF',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    cursor: 'pointer', position: 'relative'
+                                }}
+                            >
                                 <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '14px' }}>{p.name}</span>
+                                <div
+                                    onClick={(e) => { e.stopPropagation(); setActiveMenuProjectId(activeMenuProjectId === p.id ? null : p.id); }}
+                                    style={{ padding: '4px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                >
+                                    <MoreHorizontal size={18} color="#666" />
+                                </div>
+                                {activeMenuProjectId === p.id && (
+                                    <div style={{
+                                        position: 'absolute', top: '100%', right: '0', background: '#FFF',
+                                        border: '1px solid #EFEFEF', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                        zIndex: 100, width: '180px', padding: '8px', marginTop: '4px'
+                                    }}>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); runWalkthrough(p); }}
+                                            style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left', padding: '8px', cursor: 'pointer', fontFamily: 'Inter', fontSize: '13px' }}
+                                        >
+                                            ▶ Запустить проход
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -412,6 +462,49 @@ function AppContent() {
                         <Plus size={14} onClick={() => zoomIn()} style={{ cursor: 'pointer', color: '#666666' }} />
                     </div>
                 </div>
+
+                {/* Окно прохода */}
+                {activeWalkthrough && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                        background: 'rgba(255, 255, 255, 0.98)', zIndex: 1000,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        padding: '40px', boxSizing: 'border-box'
+                    }}>
+                        <button
+                            onClick={() => setActiveWalkthrough(null)}
+                            style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', cursor: 'pointer' }}
+                        >
+                            <X size={32} />
+                        </button>
+
+                        <div style={{ maxWidth: '600px', textAlign: 'center', marginBottom: '48px' }}>
+                            <h2 style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'Inter' }}>{activeWalkthrough.currentNode.data.label}</h2>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                            {activeWalkthrough.project.edges
+                                .filter(e => e.source === activeWalkthrough.currentNode.id)
+                                .map(edge => (
+                                    <button
+                                        key={edge.id}
+                                        onClick={() => goToNextNode(edge.id)}
+                                        style={{
+                                            padding: '16px 32px', borderRadius: '12px', border: '1px solid #000',
+                                            background: '#FFF', cursor: 'pointer', fontWeight: 600, fontSize: '16px', fontFamily: 'Inter'
+                                        }}
+                                    >
+                                        {edge.data?.label || "Далее"}
+                                    </button>
+                                ))
+                            }
+                        </div>
+
+                        {activeWalkthrough.project.edges.filter(e => e.source === activeWalkthrough.currentNode.id).length === 0 && (
+                            <p style={{ color: '#666', fontFamily: 'Inter' }}>Конец пути.</p>
+                        )}
+                    </div>
+                )}
             </main>
         </div>
     );
