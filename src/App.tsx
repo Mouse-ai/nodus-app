@@ -8,6 +8,7 @@ import {
     Position,
     ReactFlowProvider,
     useReactFlow,
+    useViewport,
     BaseEdge,
     EdgeLabelRenderer,
     getBezierPath,
@@ -204,6 +205,8 @@ function AppContent() {
     } | null>(null);
 
     const { screenToFlowPosition, zoomIn, zoomOut } = useReactFlow();
+    const { zoom } = useViewport();
+    const zoomPercent = Math.round((zoom || 1) * 100);
 
     const runWalkthrough = (project: Project) => {
         setActiveMenuProjectId(null);
@@ -237,7 +240,7 @@ function AppContent() {
     };
 
     const createNewProject = () => {
-        const defaultName = `Новый проект ${projects.length + 1}`;
+        const defaultName = `Новый проект ${projects.length +1}`;
         const name = prompt("Введите имя нового проекта: ", defaultName);
         if (name === null) return;
         const newId = String(Date.now());
@@ -247,7 +250,7 @@ function AppContent() {
             nodes: [{ id: '1', type: 'figmaNode', position: { x: 450, y: 150 }, data: { label: 'Вопрос?' } }],
             edges: []
         };
-        setProjects([...projects, newProject]);
+        setProjects([newProject,...projects]);
         setActiveProjectId(newId);
     };
 
@@ -461,7 +464,7 @@ function AppContent() {
 
                     <div style={{ position: 'absolute', bottom: '24px', right: '24px', height: '36px', background: '#F5F5F5', borderRadius: '10px', display: 'flex', alignItems: 'center', padding: '0 12px', gap: '16px', zIndex: 10 }}>
                         <Minus size={14} onClick={() => zoomOut()} style={{ cursor: 'pointer', color: '#666666' }} />
-                        <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '12px' }}>100%</span>
+                        <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '12px' }}>{zoomPercent}%</span>
                         <Plus size={14} onClick={() => zoomIn()} style={{ cursor: 'pointer', color: '#666666' }} />
                     </div>
                 </div>
