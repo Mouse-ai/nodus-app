@@ -38,7 +38,7 @@ import { Toolbar } from './Toolbar';
 
 interface NodeData extends Record<string, unknown> {
     label: string;
-    shape?: 'square' | 'circle' | 'diamond' | 'triangle';
+    shape?: 'square' | 'circle' | 'diamond' ;
     color?: string;
     textColor?: string;
     fontSize?: number;
@@ -76,11 +76,18 @@ function FigmaNode({ id, data }: NodeProps<Node<NodeData>>) {
                 width: '100%',
                 height: '100%',
                 zIndex: 1,
-                pointerEvents: 'none'
+                pointerEvents: 'none' // ← исправлен пробел в p ointerEvents
             }}>
                 {shape === 'square' && (
                     <rect x="1" y="1" width="158" height="158" fill={backgroundColor} stroke="#000000" strokeWidth="1.5" />
                 )}
+                {shape === 'circle' && (
+                    <circle cx="80" cy="80" r="78" fill={backgroundColor} stroke="#000000" strokeWidth="1.5" />
+                )}
+                {shape === 'diamond' && (
+                    <polygon points="80,4 156,80 80,156 4,80" fill={backgroundColor} stroke="#000000" strokeWidth="1.5" />
+                )}
+
             </svg>
 
             <Handle type="target" position={Position.Top} id="top-target" style={{ ...handleStyle, zIndex: 5 }} />

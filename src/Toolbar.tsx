@@ -3,7 +3,6 @@ import {
     Trash2,
     Square,
     Circle,
-    Triangle,
     Diamond,
     Baseline,
     PaintBucket,
@@ -57,7 +56,7 @@ interface ToolbarProps {
     onColorChange: (color: string) => void;
     onTextColorChange: (color: string) => void;
     onFontSizeChange: (size: number) => void;
-    onShapeChange: (shape: 'square' | 'circle' | 'diamond' | 'triangle') => void;
+    onShapeChange: (shape: 'square' | 'circle' | 'diamond' ) => void;
     currentData: { color?: string, textColor?: string, fontSize?: number, shape?: string };
 }
 
@@ -80,7 +79,6 @@ export function Toolbar({ onDelete, onColorChange, onTextColorChange, onFontSize
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                             <button onClick={() => { onShapeChange('square'); setActiveMenu(null); }} style={btnStyle}><Square size={16} /></button>
                             <button onClick={() => { onShapeChange('circle'); setActiveMenu(null); }} style={btnStyle}><Circle size={16} /></button>
-                            <button onClick={() => { onShapeChange('triangle'); setActiveMenu(null); }} style={btnStyle}><Triangle size={16} /></button>
                             <button onClick={() => { onShapeChange('diamond'); setActiveMenu(null); }} style={btnStyle}><Diamond size={16} /></button>
                         </div>
                     </MenuWrapper>
